@@ -1,0 +1,4 @@
+p,user,book,read
+p,admin,book,read
+g,alice,user
+g,alice,admin

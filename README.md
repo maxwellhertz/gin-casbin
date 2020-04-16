@@ -1,6 +1,6 @@
 # Overview 
 
-This is a super simple middleware integrating with Gin and [Casbin](https://github.com/casbin/casbin).
+This is a super simple middleware integrating with Gin and [Casbin](https://github.com/casbin/casbin) to implement RBAC in Gin apps.
 
 # Installation
 

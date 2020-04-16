@@ -3,7 +3,8 @@ package main
 import (
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
-	gcasbin "github.com/maxwellhertz/gin-casbin"
+	"github.com/maxwellhertz/gin-casbin"
+	"log"
 	"strings"
 	"time"
 )
@@ -32,16 +33,23 @@ func main() {
 	})
 
 	// Use Casbin authentication middleware.
-	auth := gcasbin.NewAuthMiddleware("examples/config/model.conf", "examples/config/policy.csv", subjectFromJWT)
-	r.GET("/book", auth.Enforce("book", "read"), func(c *gin.Context) {
+	auth, err := gcasbin.NewCasbinMiddleware("examples/config/model.conf", "examples/config/policy.csv", subjectFromJWT)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r.GET("/book", auth.RequiresPermissions([]string{"book:read"}, gcasbin.AND), func(c *gin.Context) {
 		c.String(200, "you read the book successfully")
+	})
+	r.POST("/book", auth.RequiresRoles([]string{"user"}, gcasbin.AND), func(c *gin.Context) {
+		c.String(200, "you posted a book successfully")
 	})
 
 	r.Run()
 }
 
 // subjectFromJWT parses a JWT and extract subject from sub claim.
-func subjectFromJWT(c *gin.Context, _ ...interface{}) interface{} {
+func subjectFromJWT(c *gin.Context, _ ...interface{}) string {
 	authHeader := c.Request.Header.Get("Authorization")
 	prefix := "Bearer "
 	if !strings.HasPrefix(authHeader, prefix) {
@@ -51,13 +59,13 @@ func subjectFromJWT(c *gin.Context, _ ...interface{}) interface{} {
 	token := authHeader[strings.Index(authHeader, prefix)+len(prefix):]
 	if token == "" {
 		// JWT not found.
-		return nil
+		return ""
 	}
 
 	var payload jwt.Payload
 	_, err := jwt.Verify([]byte(token), jwtKey, &payload)
 	if err != nil {
-		return nil
+		return ""
 	}
 	return payload.Subject
 }
