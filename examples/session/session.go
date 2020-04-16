@@ -37,6 +37,7 @@ func main() {
 	r.Run()
 }
 
+// subjectFromSession get subject from session.
 func subjectFromSession(c *gin.Context, _ ...interface{}) interface{} {
 	// Get session ID from cookie.
 	sessionId, err := c.Cookie("SESSIONID")

@@ -19,13 +19,13 @@ type SubjectFn func(c *gin.Context, args ...interface{}) interface{}
 // policyAdapter can be a file or a DB adapter.
 // File: path/to/basic_policy.csv
 // MySQL DB: mysqladapter.NewDBAdapter("mysql", "mysql_username:mysql_password@tcp(127.0.0.1:3306)/")
-// subFn is a function that looks up the current subject in runtime and returns an empty string if nothing found.
+// subFn is a function that looks up the current subject in runtime and returns nil if nothing found.
 func NewAuthMiddleware(modelFile string, policyAdapter interface{}, subFn SubjectFn) *AuthMiddleware {
 	enforcer := lcasbin.NewEnforcer(modelFile, policyAdapter)
 	return &AuthMiddleware{enforcer: enforcer, subFn: subFn}
 }
 
-// Enforce tries to find the current subject from JWT's sub header
+// Enforce tries to find the current subject by calling SubjectFn
 // and enforces predefined Casbin policies.
 func (am *AuthMiddleware) Enforce(obj string, act string, args ...interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
