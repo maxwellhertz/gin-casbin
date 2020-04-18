@@ -19,7 +19,7 @@ You will have to provide a custom function to look up the current subject in run
 ```go
 // SubjectFn is used to look up current subject in runtime.
 // If it can not find anything, just return an empty string.
-type SubjectFn func(c *gin.Context, args ...interface{}) string
+type SubjectFn func(c *gin.Context) string
 ```
 
 I am pretty sure there are many ways to do this. I provided two examples using JWT and session respectively.
