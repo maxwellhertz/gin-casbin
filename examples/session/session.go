@@ -35,10 +35,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r.GET("/book", auth.RequiresPermissions([]string{"book:read"}, gcasbin.AND), func(c *gin.Context) {
+	r.GET("/book", auth.RequiresPermissions([]string{"book:read"}, gcasbin.WithLogic(gcasbin.AND)), func(c *gin.Context) {
 		c.String(200, "you read the book successfully")
 	})
-	r.POST("/book", auth.RequiresRoles([]string{"user"}, gcasbin.AND), func(c *gin.Context) {
+	r.POST("/book", auth.RequiresRoles([]string{"user"}, gcasbin.WithLogic(gcasbin.AND)), func(c *gin.Context) {
 		c.String(200, "you posted a book successfully")
 	})
 
@@ -46,7 +46,7 @@ func main() {
 }
 
 // subjectFromSession get subject from session.
-func subjectFromSession(c *gin.Context, _ ...interface{}) string {
+func subjectFromSession(c *gin.Context) string {
 	// Get session ID from cookie.
 	sessionId, err := c.Cookie("SESSIONID")
 	if err != nil {

@@ -38,10 +38,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r.GET("/book", auth.RequiresPermissions([]string{"book:read"}, gcasbin.AND), func(c *gin.Context) {
+	r.GET("/book", auth.RequiresPermissions([]string{"book:read"}, gcasbin.WithLogic(gcasbin.AND)), func(c *gin.Context) {
 		c.String(200, "you read the book successfully")
 	})
-	r.POST("/book", auth.RequiresRoles([]string{"user"}, gcasbin.AND), func(c *gin.Context) {
+	r.POST("/book", auth.RequiresRoles([]string{"user"}, gcasbin.WithLogic(gcasbin.AND)), func(c *gin.Context) {
 		c.String(200, "you posted a book successfully")
 	})
 
@@ -49,7 +49,7 @@ func main() {
 }
 
 // subjectFromJWT parses a JWT and extract subject from sub claim.
-func subjectFromJWT(c *gin.Context, _ ...interface{}) string {
+func subjectFromJWT(c *gin.Context) string {
 	authHeader := c.Request.Header.Get("Authorization")
 	prefix := "Bearer "
 	if !strings.HasPrefix(authHeader, prefix) {

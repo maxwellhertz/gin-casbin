@@ -17,7 +17,7 @@ type CasbinMiddleware struct {
 
 // SubjectFn is used to look up current subject in runtime.
 // If it can not find anything, just return an empty string.
-type SubjectFn func(c *gin.Context, args ...interface{}) string
+type SubjectFn func(c *gin.Context) string
 
 // Logic is the logical operation (AND/OR) used in permission checks
 // in case multiple permissions or roles are specified.
@@ -49,27 +49,55 @@ func NewCasbinMiddleware(modelFile string, policyAdapter interface{}, subFn Subj
 	}, nil
 }
 
+// Option is used to change some default behaviors.
+type Option interface {
+	apply(*options)
+}
+
+type options struct {
+	logic Logic
+}
+
+type logicOption Logic
+
+func (lo logicOption) apply(opts *options) {
+	opts.logic = Logic(lo)
+}
+
+// WithLogic sets the logical operator used in permission or role checks.
+func WithLogic(logic Logic) Option {
+	return logicOption(logic)
+}
+
 // RequiresPermissions tries to find the current subject by calling SubjectFn
 // and determine if the subject has the required permissions according to predefined Casbin policies.
 // permissions are formatted strings. For example, "file:read" represents the permission to read a file.
-// logic is the logical operation for the permissions checks in case multiple permissions are specified.
-// subFnArgs is used in SubjectFn.
-func (am *CasbinMiddleware) RequiresPermissions(permissions []string, logic Logic, subFnArgs ...interface{}) gin.HandlerFunc {
+// opts is some optional configurations such as the logical operator (default is AND) in case multiple permissions are specified.
+func (am *CasbinMiddleware) RequiresPermissions(permissions []string, opts ...Option) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Look up current subject.
-		sub := am.subFn(c, subFnArgs)
-		if sub == "" {
-			c.AbortWithStatus(401)
-			return
-		}
-
 		if len(permissions) == 0 {
 			c.Next()
 			return
 		}
 
+		// Here we provide default options.
+		actualOptions := options{
+			logic: AND,
+		}
+		// Apply actual options.
+		for _, opt := range opts {
+			opt.apply(&actualOptions)
+		}
+
+		// Look up current subject.
+		sub := am.subFn(c)
+		if sub == "" {
+			c.AbortWithStatus(401)
+			return
+		}
+
 		// Enforce Casbin policies.
-		if logic == AND {
+		if actualOptions.logic == AND {
 			// Must pass all tests.
 			for _, permission := range permissions {
 				obj, act := parsePermissionStrings(permission)
@@ -116,15 +144,28 @@ func parsePermissionStrings(str string) (string, string) {
 
 // RequiresPermissions tries to find the current subject by calling SubjectFn
 // and determine if the subject has the required roles according to predefined Casbin policies.
-// logic is the logical operation for the permissions checks in case multiple roles are specified.
-// subFnArgs is used in SubjectFn.
-func (am *CasbinMiddleware) RequiresRoles(requiredRoles []string, logic Logic, subFnArgs ...interface{}) gin.HandlerFunc {
+// opts is some optional configurations such as the logical operator (default is AND) in case multiple roles are specified.
+func (am *CasbinMiddleware) RequiresRoles(requiredRoles []string, opts ...Option) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if len(requiredRoles) == 0 {
+			c.Next()
+			return
+		}
+
 		// Look up current subject.
-		sub := am.subFn(c, subFnArgs)
+		sub := am.subFn(c)
 		if sub == "" {
 			c.AbortWithStatus(401)
 			return
+		}
+
+		// Here we provide default options.
+		actualOptions := options{
+			logic: AND,
+		}
+		// Apply actual options.
+		for _, opt := range opts {
+			opt.apply(&actualOptions)
 		}
 
 		actualRoles, err := am.enforcer.GetRolesForUser(sub)
@@ -137,7 +178,7 @@ func (am *CasbinMiddleware) RequiresRoles(requiredRoles []string, logic Logic, s
 		// Enforce Casbin policies.
 		sort.Strings(requiredRoles)
 		sort.Strings(actualRoles)
-		if logic == AND {
+		if actualOptions.logic == AND {
 			// Must have all required roles.
 			if !reflect.DeepEqual(requiredRoles, actualRoles) {
 				c.AbortWithStatus(401)

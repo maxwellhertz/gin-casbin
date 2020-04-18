@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	SubjectAlice = func(c *gin.Context, _ ...interface{}) string { return "alice" }
-	SubjectNil   = func(c *gin.Context, _ ...interface{}) string { return "" }
+	SubjectAlice = func(c *gin.Context) string { return "alice" }
+	SubjectNil   = func(c *gin.Context) string { return "" }
 )
 
 func TestNewAuthMiddleware(t *testing.T) {
@@ -42,7 +42,7 @@ func TestNewAuthMiddleware(t *testing.T) {
 }
 
 func TestRequiresPermissions(t *testing.T) {
-	table := []struct {
+	tests := []struct {
 		policyFile   string
 		subjectFn    SubjectFn
 		permissions  []string
@@ -142,24 +142,24 @@ func TestRequiresPermissions(t *testing.T) {
 		},
 	}
 
-	for _, entry := range table {
-		middleware, err := NewCasbinMiddleware(modelFile, entry.policyFile, entry.subjectFn)
+	for _, tt := range tests {
+		middleware, err := NewCasbinMiddleware(modelFile, tt.policyFile, tt.subjectFn)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		r := setupRouter(middleware.RequiresPermissions(entry.permissions, entry.logic))
+		r := setupRouter(middleware.RequiresPermissions(tt.permissions, WithLogic(tt.logic)))
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/book", nil)
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, entry.expectedCode, w.Code)
+		assert.Equal(t, tt.expectedCode, w.Code)
 	}
 }
 
 func TestRequiresRoles(t *testing.T) {
-	table := []struct {
+	tests := []struct {
 		policyFile   string
 		subjectFn    SubjectFn
 		roles        []string
@@ -231,19 +231,19 @@ func TestRequiresRoles(t *testing.T) {
 		},
 	}
 
-	for _, entry := range table {
-		middleware, err := NewCasbinMiddleware(modelFile, entry.policyFile, entry.subjectFn)
+	for _, tt := range tests {
+		middleware, err := NewCasbinMiddleware(modelFile, tt.policyFile, tt.subjectFn)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		r := setupRouter(middleware.RequiresRoles(entry.roles, entry.logic))
+		r := setupRouter(middleware.RequiresRoles(tt.roles, WithLogic(tt.logic)))
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/book", nil)
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, entry.expectedCode, w.Code)
+		assert.Equal(t, tt.expectedCode, w.Code)
 	}
 }
 
