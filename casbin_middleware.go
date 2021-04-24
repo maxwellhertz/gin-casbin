@@ -2,16 +2,17 @@ package gcasbin
 
 import (
 	"errors"
-	lcasbin "github.com/casbin/casbin"
-	"github.com/gin-gonic/gin"
 	"log"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/casbin/casbin/v2"
+	"github.com/gin-gonic/gin"
 )
 
 type CasbinMiddleware struct {
-	enforcer *lcasbin.Enforcer
+	enforcer *casbin.Enforcer
 	subFn    SubjectFn
 }
 
@@ -29,7 +30,7 @@ const (
 )
 
 var (
-	SubFnNilErr = errors.New("subFn is nil")
+	ErrSubFnNil = errors.New("subFn is nil")
 )
 
 // NewCasbinMiddleware returns a new CasbinMiddleware using Casbin's Enforcer internally.
@@ -40,11 +41,16 @@ var (
 // subFn is a function that looks up the current subject in runtime and returns an empty string if nothing found.
 func NewCasbinMiddleware(modelFile string, policyAdapter interface{}, subFn SubjectFn) (*CasbinMiddleware, error) {
 	if subFn == nil {
-		return nil, SubFnNilErr
+		return nil, ErrSubFnNil
+	}
+
+	e, err := casbin.NewEnforcer(modelFile, policyAdapter)
+	if err != nil {
+		return nil, err
 	}
 
 	return &CasbinMiddleware{
-		enforcer: lcasbin.NewEnforcer(modelFile, policyAdapter),
+		enforcer: e,
 		subFn:    subFn,
 	}, nil
 }
@@ -108,7 +114,7 @@ func (am *CasbinMiddleware) RequiresPermissions(permissions []string, opts ...Op
 					return
 				}
 
-				if ok := am.enforcer.Enforce(sub, obj, act); !ok {
+				if ok, err := am.enforcer.Enforce(sub, obj, act); !ok || err != nil {
 					c.AbortWithStatus(401)
 					return
 				}
@@ -124,7 +130,7 @@ func (am *CasbinMiddleware) RequiresPermissions(permissions []string, opts ...Op
 					continue
 				}
 
-				if ok := am.enforcer.Enforce(sub, obj, act); ok {
+				if ok, err := am.enforcer.Enforce(sub, obj, act); ok && err == nil {
 					c.Next()
 					return
 				}

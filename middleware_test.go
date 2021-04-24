@@ -1,11 +1,12 @@
 package gcasbin
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -27,7 +28,7 @@ func TestNewAuthMiddleware(t *testing.T) {
 	}{
 		{
 			subjectFn:   nil,
-			expectedErr: SubFnNilErr,
+			expectedErr: ErrSubFnNil,
 		},
 		{
 			subjectFn:   SubjectAlice,
