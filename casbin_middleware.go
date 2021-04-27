@@ -3,7 +3,6 @@ package gcasbin
 import (
 	"errors"
 	"log"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -186,11 +185,13 @@ func (am *CasbinMiddleware) RequiresRoles(requiredRoles []string, opts ...Option
 		sort.Strings(actualRoles)
 		if actualOptions.logic == AND {
 			// Must have all required roles.
-			if !reflect.DeepEqual(requiredRoles, actualRoles) {
-				c.AbortWithStatus(401)
-			} else {
-				c.Next()
+			for _, role := range requiredRoles {
+				ii := sort.SearchStrings(actualRoles, role)
+				if ii >= len(actualRoles) || actualRoles[ii] != role {
+					c.AbortWithStatus(401)
+				}
 			}
+			c.Next()
 		} else {
 			// Need to have at least one of required roles.
 			for _, requiredRole := range requiredRoles {
