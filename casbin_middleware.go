@@ -185,9 +185,9 @@ func (am *CasbinMiddleware) RequiresRoles(requiredRoles []string, opts ...Option
 		sort.Strings(actualRoles)
 		if actualOptions.logic == AND {
 			// Must have all required roles.
-			for _, role := range requiredRoles {
-				ii := sort.SearchStrings(actualRoles, role)
-				if ii >= len(actualRoles) || actualRoles[ii] != role {
+			for _, requiredRole := range requiredRoles {
+				i := sort.SearchStrings(actualRoles, requiredRole)
+				if i >= len(actualRoles) || actualRoles[i] != requiredRole {
 					c.AbortWithStatus(401)
 				}
 			}
